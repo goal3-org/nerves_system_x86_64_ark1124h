@@ -12,6 +12,28 @@ follows:
    releases, and Linux kernel updates. They're also made to fix bugs and add
    features to the build infrastructure.
 
+## v0.1
+
+Initial release of nerves_system_x86_64_ark1124h for ARK1124H (Intel Atom E3825).
+
+* Changes
+  * Custom kernel configuration for Intel Bay Trail support
+  * Added Intel Graphics (DRM_I915) drivers
+  * Added Intel chipset support (LPSS)
+  * Added ACPI support for power management
+  * Added USB serial and network configuration
+  * Added USB net support
+  * Adjusted kernel for VintageNetMobile support
+  * Updated to Elixir 1.18.4
+
+* Package updates
+  * [nerves_system_br v1.32.3 release notes](https://github.com/nerves-project/nerves_system_br/releases/tag/v1.32.3)
+  * Linux 6.12.54
+
+* Updated dependencies
+  * [Erlang/OTP 28.1.1](https://erlang.org/download/OTP-28.1.1.README.md)
+  * [Buildroot 2025.05.2](https://lore.kernel.org/buildroot/7bed9b2e-a9d3-476b-84d6-61134e2f726f@rnout.be/T/)
+
 ## v1.32.0
 
 This is a major Erlang and Buildroot update. This updates from Erlang/OTP 27 to
