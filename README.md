@@ -29,6 +29,22 @@ If you need custom modifications to this system for your device, clone this
 repository and update as described in [Making custom
 systems](https://hexdocs.pm/nerves/systems.html#customizing-your-own-nerves-system)
 
+## Package checksum and kernel rebuilds
+
+Nerves systems use a checksum of `package_files()` in `mix.exs` to decide when to
+rebuild the system artifact. If the checksum matches a cached artifact, Mix
+skips the Buildroot/kernel build and reuses the cache.
+
+The `linux.fragment` file is referenced by `nerves_defconfig` via
+`BR2_LINUX_KERNEL_CONFIG_FRAGMENT_FILES` and is merged with the base defconfig
+when building the kernel. If `linux.fragment` is **not** in `package_files()`,
+changes to it do not change the checksum, so the kernel is never rebuilt and
+your new options (e.g. `CONFIG_BPF_SYSCALL` for cgroups-v2) are ignored.
+
+Including `linux.fragment` in `package_files()` ensures that edits to the kernel
+fragment invalidate the cache and trigger a full system rebuild with the updated
+kernel configuration.
+
 ## Running in qemu
 
 It's possible to run Nerves projects built with this system in Qemu with some
