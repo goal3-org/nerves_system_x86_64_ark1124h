@@ -17,6 +17,7 @@ probably will require some work.
 | IEx terminal         | Virtual serial - ttyS0          |
 | Hardware I/O         | None                            |
 | Ethernet             | Yes                             |
+| Docker Compose V2   | Optional (off by default, ~59 MB) |
 
 ## Using
 
@@ -28,6 +29,19 @@ for more information.
 If you need custom modifications to this system for your device, clone this
 repository and update as described in [Making custom
 systems](https://hexdocs.pm/nerves/systems.html#customizing-your-own-nerves-system)
+
+### Optional: Docker Compose V2
+
+Docker Compose is **not** included by default (adds ~59 MB). To include it, set the build-time env var when building the system:
+
+```sh
+export NERVES_SYSTEM_DOCKER_COMPOSE=1
+# then build the system (e.g. mix nerves.system.shell, or mix firmware which builds the system)
+# From your app: 
+NERVES_SYSTEM_DOCKER_COMPOSE=1 mix firmware.burn
+```
+
+The binary is installed at `/usr/bin/docker-compose`. `DOCKER_HOST` is set in `erlinit.config` to `unix:///run/podman/podman.sock` so Compose talks to Podman. Verify from IEx: `System.get_env("DOCKER_HOST")` and `System.cmd("/usr/bin/docker-compose", ["version"], stderr_to_stdout: true)`.
 
 ## Package checksum and kernel rebuilds
 
