@@ -1,6 +1,14 @@
 name: CI
 
-on: [push]
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - "v*"
+  pull_request:
+    branches:
+      - main
 
 env:
   OTP_VERSION: 28.1.1
@@ -20,6 +28,7 @@ jobs:
           elixir-version: ${{ env.ELIXIR_VERSION }}
           nerves-bootstrap-version: ${{ env.NERVES_BOOTSTRAP_VERSION }}
           save-dl-cache: false
+
   build-system:
     needs: [get-br-dependencies]
     runs-on: ubuntu-22.04
@@ -32,16 +41,46 @@ jobs:
           otp-version: ${{ env.OTP_VERSION }}
           elixir-version: ${{ env.ELIXIR_VERSION }}
           nerves-bootstrap-version: ${{ env.NERVES_BOOTSTRAP_VERSION }}
+
   deploy-system:
     needs: [build-system]
-    if: github.ref_type == 'tag'
+    # Deploy on main branch push OR on tag push
+    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-22.04
     permissions:
       contents: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Fetch all history for tags
+
       - uses: gridpoint-com/actions-nerves-system@v1
+      
+      - name: Check and Tag Release
+        id: tag_version
+        if: github.ref == 'refs/heads/main'
+        run: |
+          VERSION=$(cat VERSION)
+          TAG="v$VERSION"
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          
+          # Configure git
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git config --global user.name "github-actions[bot]"
+          
+          if git rev-parse "$TAG" >/dev/null 2>&1; then
+            echo "Tag $TAG already exists. Skipping tagging and deploy."
+            echo "skip_deploy=true" >> $GITHUB_OUTPUT
+          else
+            echo "Tagging $TAG"
+            git tag -a "$TAG" -m "Release $TAG"
+            git push origin "$TAG"
+            echo "skip_deploy=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Deploy nerves_system
+        # Run if we just created a tag (on main) OR if this workflow was triggered by a tag
+        if: (github.ref == 'refs/heads/main' && steps.tag_version.outputs.skip_deploy != 'true') || startsWith(github.ref, 'refs/tags/v')
         uses: ./.actions/deploy-system
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
