@@ -1,77 +1,55 @@
 version = 1
 
 [[annotations]]
-path = [
- ".formatter.exs",
- ".github/CODEOWNERS",
- ".github/workflows/ci.yml",
- ".gitignore",
- "CHANGELOG.md",
- "NOTICE",
- "REUSE.toml",
- "mix.exs",
- "mix.lock",
- ".tool-versions",
- "VERSION"
-]
+path = [".formatter.exs", ".github/CODEOWNERS", ".github/workflows/ci.yml", ".gitignore", "CHANGELOG.md", "REUSE.toml", "mix.exs", "mix.lock", ".tool-versions", "VERSION"]
 precedence = "aggregate"
 SPDX-FileCopyrightText = "None"
 SPDX-License-Identifier = "CC0-1.0"
 
 [[annotations]]
-path = [
- "README.md",
- "README_CUSTOM_SYSTEM.md"
-]
+path = ["README.md", "README_CUSTOM_SYSTEM.md"]
 precedence = "aggregate"
 SPDX-FileCopyrightText = "2016 Frank Hunleth"
 SPDX-License-Identifier = "CC-BY-4.0"
 
 # Buildroot derived or related files
 [[annotations]]
-path = [
- "Config.in",
- "package/**",
- "external.mk",
- "nerves_defconfig",
- "post-build.sh",
- "post-createfs.sh"
-]
+path = ["Config.in", "package/**", "external.mk", "nerves_defconfig", "post-build.sh", "post-createfs.sh"]
 precedence = "aggregate"
 SPDX-FileCopyrightText = "The Buildroot developers <buildroot@buildroot.org>"
 SPDX-License-Identifier = "GPL-2.0-or-later"
 
 # Linux kernel derived or related files
 [[annotations]]
-path = [
- "linux-6.12.defconfig",
-]
+path = ["linux-6.12.defconfig", "linux.fragment"]
 precedence = "override"
 SPDX-FileCopyrightText = "Various"
 SPDX-License-Identifier = "GPL-2.0-only"
 
 # Fwup config files
 [[annotations]]
-path = [
- "fwup-ops.conf",
- "fwup.conf",
- "fwup_include/*"
-]
+path = ["fwup-ops.conf", "fwup.conf", "fwup_include/*"]
 precedence = "aggregate"
 SPDX-FileCopyrightText = "None"
 SPDX-License-Identifier = "CC0-1.0"
 
 # Various config files
 [[annotations]]
-path = [
- "busybox.fragment",
- "cmdline.txt",
- "config.txt",
- "grub.cfg",
- "rootfs_overlay/etc/boardid.config",
- "rootfs_overlay/etc/erlinit.config",
- "rootfs_overlay/etc/fw_env.config"
-]
+path = ["busybox.fragment", "grub.cfg", "rootfs_overlay/etc/boardid.config", "rootfs_overlay/etc/erlinit.config", "rootfs_overlay/etc/fw_env.config", "rootfs_overlay/etc/containers/containers.conf", "rootfs_overlay/etc/containers/policy.json", "rootfs_overlay/etc/containers/storage.conf"]
 precedence = "aggregate"
 SPDX-FileCopyrightText = "None"
 SPDX-License-Identifier = "CC0-1.0"
+
+# Container runtime binaries (containers project: Apache-2.0)
+[[annotations]]
+path = ["rootfs_overlay/usr/bin/conmon", "rootfs_overlay/usr/bin/podman", "rootfs_overlay/usr/lib/podman/aardvark-dns", "rootfs_overlay/usr/lib/podman/catatonit", "rootfs_overlay/usr/lib/podman/netavark"]
+precedence = "aggregate"
+SPDX-FileCopyrightText = "The containers project"
+SPDX-License-Identifier = "Apache-2.0"
+
+# crun (GPL-2.0-or-later)
+[[annotations]]
+path = ["rootfs_overlay/usr/bin/crun"]
+precedence = "aggregate"
+SPDX-FileCopyrightText = "Giuseppe Scrivano"
+SPDX-License-Identifier = "GPL-2.0-or-later"
