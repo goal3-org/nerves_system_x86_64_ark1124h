@@ -43,17 +43,70 @@ ln -sf ops.fw $TARGET_DIR/usr/share/fwup/revert.fw
 # Copy the fwup includes to the images dir
 cp -rf $NERVES_DEFCONFIG_DIR/fwup_include $BINARIES_DIR
 
+# Helper: download a file using whichever tool is available
+download() {
+  if command -v wget >/dev/null 2>&1; then
+    wget -q -O "$2" "$1"
+  else
+    curl -sSL -o "$2" "$1"
+  fi
+}
+
+# --- Container runtime binaries (downloaded at build time) ---
+PODMAN_VERSION="v5.7.1"
+CONMON_VERSION="v2.1.13"
+CRUN_VERSION="1.25.1"
+NETAVARK_VERSION="v1.17.0"
+AARDVARK_DNS_VERSION="v1.17.0"
+CATATONIT_VERSION="v0.2.1"
+
+mkdir -p "$TARGET_DIR/usr/bin" "$TARGET_DIR/usr/lib/podman"
+
+# podman (remote-static build, ships as a tarball)
+PODMAN_TAR="podman-remote-static-linux_amd64.tar.gz"
+download "https://github.com/containers/podman/releases/download/${PODMAN_VERSION}/${PODMAN_TAR}" "/tmp/${PODMAN_TAR}"
+tar xzf "/tmp/${PODMAN_TAR}" -C /tmp
+cp /tmp/bin/podman-remote-static-linux_amd64 "$TARGET_DIR/usr/bin/podman"
+chmod 755 "$TARGET_DIR/usr/bin/podman"
+rm -rf "/tmp/${PODMAN_TAR}" /tmp/bin
+
+# conmon
+download "https://github.com/containers/conmon/releases/download/${CONMON_VERSION}/conmon.amd64" \
+  "$TARGET_DIR/usr/bin/conmon"
+chmod 755 "$TARGET_DIR/usr/bin/conmon"
+
+# crun
+download "https://github.com/containers/crun/releases/download/${CRUN_VERSION}/crun-${CRUN_VERSION}-linux-amd64" \
+  "$TARGET_DIR/usr/bin/crun"
+chmod 755 "$TARGET_DIR/usr/bin/crun"
+
+# netavark (ships gzipped)
+download "https://github.com/containers/netavark/releases/download/${NETAVARK_VERSION}/netavark.gz" \
+  "/tmp/netavark.gz"
+gunzip -f /tmp/netavark.gz
+cp /tmp/netavark "$TARGET_DIR/usr/lib/podman/netavark"
+chmod 755 "$TARGET_DIR/usr/lib/podman/netavark"
+rm -f /tmp/netavark
+
+# aardvark-dns (ships gzipped)
+download "https://github.com/containers/aardvark-dns/releases/download/${AARDVARK_DNS_VERSION}/aardvark-dns.gz" \
+  "/tmp/aardvark-dns.gz"
+gunzip -f /tmp/aardvark-dns.gz
+cp /tmp/aardvark-dns "$TARGET_DIR/usr/lib/podman/aardvark-dns"
+chmod 755 "$TARGET_DIR/usr/lib/podman/aardvark-dns"
+rm -f /tmp/aardvark-dns
+
+# catatonit
+download "https://github.com/openSUSE/catatonit/releases/download/${CATATONIT_VERSION}/catatonit.x86_64" \
+  "$TARGET_DIR/usr/lib/podman/catatonit"
+chmod 755 "$TARGET_DIR/usr/lib/podman/catatonit"
+
 # Optional: Docker Compose V2 (~59 MB static binary). Off by default; set NERVES_SYSTEM_DOCKER_COMPOSE=1
 # when building the system to include it. DOCKER_HOST is set in erlinit.config for Podman.
 if [ -n "${NERVES_SYSTEM_DOCKER_COMPOSE:-}" ]; then
   COMPOSE_VERSION="v2.24.5"
   COMPOSE_BINARY="docker-compose-linux-x86_64"
-  COMPOSE_URL="https://github.com/docker/compose/releases/download/${COMPOSE_VERSION}/${COMPOSE_BINARY}"
-  mkdir -p $TARGET_DIR/usr/bin
-  if command -v wget >/dev/null 2>&1; then
-    wget -q -O "$TARGET_DIR/usr/bin/docker-compose" "$COMPOSE_URL"
-  else
-    curl -sSL -o "$TARGET_DIR/usr/bin/docker-compose" "$COMPOSE_URL"
-  fi
+  download "https://github.com/docker/compose/releases/download/${COMPOSE_VERSION}/${COMPOSE_BINARY}" \
+    "$TARGET_DIR/usr/bin/docker-compose"
   chmod 755 "$TARGET_DIR/usr/bin/docker-compose"
 fi
