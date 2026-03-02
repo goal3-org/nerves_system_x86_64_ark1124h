@@ -4,11 +4,6 @@ on:
   push:
     branches:
       - main
-    tags:
-      - "v*"
-  pull_request:
-    branches:
-      - main
 
 env:
   OTP_VERSION: 28.1.1
@@ -16,12 +11,33 @@ env:
   NERVES_BOOTSTRAP_VERSION: 1.14.0
 
 jobs:
-  get-br-dependencies:
+  build-and-deploy-main:
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-22.04
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
       - uses: gridpoint-com/actions-nerves-system@v1
+
+      - name: Check if version tag already exists
+        id: check_tag
+        run: |
+          git fetch --tags
+          version=$(cat VERSION)
+          tag="v$version"
+          if git rev-parse "$tag" >/dev/null 2>&1; then
+            echo "skip=true" >> $GITHUB_OUTPUT
+            echo "Tag $tag already exists, skipping."
+          else
+            echo "skip=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Get Buildroot Dependencies
+        if: steps.check_tag.outputs.skip != 'true'
         uses: ./.actions/get-br-dependencies
         with:
           otp-version: ${{ env.OTP_VERSION }}
@@ -29,65 +45,25 @@ jobs:
           nerves-bootstrap-version: ${{ env.NERVES_BOOTSTRAP_VERSION }}
           save-dl-cache: false
 
-  build-system:
-    needs: [get-br-dependencies]
-    runs-on: ubuntu-22.04
-    steps:
-      - uses: actions/checkout@v4
-      - uses: gridpoint-com/actions-nerves-system@v1
       - name: Build nerves_system
+        if: steps.check_tag.outputs.skip != 'true'
         uses: ./.actions/build-system
         with:
           otp-version: ${{ env.OTP_VERSION }}
           elixir-version: ${{ env.ELIXIR_VERSION }}
           nerves-bootstrap-version: ${{ env.NERVES_BOOTSTRAP_VERSION }}
 
-  deploy-system:
-    needs: [build-system]
-    # Deploy on main branch push OR on tag push
-    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
-    runs-on: ubuntu-22.04
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0 # Fetch all history for tags
-
-      - name: Check and Tag Release
-        id: tag_version
-        if: github.ref == 'refs/heads/main'
+      - name: Tag and deploy
+        if: steps.check_tag.outputs.skip != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           VERSION=$(cat VERSION)
           TAG="v$VERSION"
-          echo "VERSION=$VERSION" >> $GITHUB_ENV
-          
-          # Configure git
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git config --global user.name "github-actions[bot]"
-          
-          if git rev-parse "$TAG" >/dev/null 2>&1; then
-            echo "Tag $TAG already exists. Skipping tagging and deploy."
-            echo "skip_deploy=true" >> $GITHUB_OUTPUT
-          else
-            echo "Tagging $TAG"
-            echo "tag=$TAG" >> $GITHUB_OUTPUT
+          if ! git rev-parse "$TAG" >/dev/null 2>&1; then
             git tag -a "$TAG" -m "Release $TAG"
             git push origin "$TAG"
-            echo "skip_deploy=false" >> $GITHUB_OUTPUT
           fi
-
-      - name: Restore build artifacts
-        if: (github.ref == 'refs/heads/main' && steps.tag_version.outputs.skip_deploy != 'true') || startsWith(github.ref, 'refs/tags/v')
-        uses: actions/cache/restore@v4
-        with:
-          path: deploy/system
-          key: deploy/system-${{ github.sha }}-${{ github.ref == 'refs/heads/main' && 'main' || github.ref_name }}
-
-      - name: Deploy artifacts to Github
-        if: (github.ref == 'refs/heads/main' && steps.tag_version.outputs.skip_deploy != 'true') || startsWith(github.ref, 'refs/tags/v')
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          RELEASE_TAG: ${{ github.ref == 'refs/heads/main' && steps.tag_version.outputs.tag || github.ref_name }}
-        run: |
-          gh release create "$RELEASE_TAG" deploy/system/artifacts/* --title "$RELEASE_TAG" --draft
+          gh release create "$TAG" deploy/system/artifacts/* --title "$TAG" --draft
