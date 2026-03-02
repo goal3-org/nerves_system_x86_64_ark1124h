@@ -54,8 +54,6 @@ jobs:
         with:
           fetch-depth: 0 # Fetch all history for tags
 
-      - uses: gridpoint-com/actions-nerves-system@v1
-      
       - name: Check and Tag Release
         id: tag_version
         if: github.ref == 'refs/heads/main'
@@ -73,14 +71,23 @@ jobs:
             echo "skip_deploy=true" >> $GITHUB_OUTPUT
           else
             echo "Tagging $TAG"
+            echo "tag=$TAG" >> $GITHUB_OUTPUT
             git tag -a "$TAG" -m "Release $TAG"
             git push origin "$TAG"
             echo "skip_deploy=false" >> $GITHUB_OUTPUT
           fi
 
-      - name: Deploy nerves_system
-        # Run if we just created a tag (on main) OR if this workflow was triggered by a tag
+      - name: Restore build artifacts
         if: (github.ref == 'refs/heads/main' && steps.tag_version.outputs.skip_deploy != 'true') || startsWith(github.ref, 'refs/tags/v')
-        uses: ./.actions/deploy-system
+        uses: actions/cache/restore@v4
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: deploy/system
+          key: deploy/system-${{ github.sha }}-${{ github.ref == 'refs/heads/main' && 'main' || github.ref_name }}
+
+      - name: Deploy artifacts to Github
+        if: (github.ref == 'refs/heads/main' && steps.tag_version.outputs.skip_deploy != 'true') || startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ github.ref == 'refs/heads/main' && steps.tag_version.outputs.tag || github.ref_name }}
+        run: |
+          gh release create "$RELEASE_TAG" deploy/system/artifacts/* --title "$RELEASE_TAG" --draft
