@@ -58,6 +58,31 @@ CONFIG_X86_PKG_TEMP_THERMAL=y
 CONFIG_WATCHDOG=y
 CONFIG_WATCHDOG_NOWAYOUT=y
 CONFIG_SOFT_WATCHDOG=y
+# Watchdog. These units run unattended, so a hardware watchdog matters: a
+# kernel timer (SOFT_WATCHDOG) recovers a wedged BEAM but not a wedged kernel,
+# because the thing meant to notice is part of what hung.
+#
+# Both drivers below are enabled and neither binds on this board. The blocker
+# is the BIOS, not this file; both were tested on hardware.
+#
+#   ITCO_WDT: this board is Apollo Lake (CPU reports E3940, LPC bridge PCI
+#   0x5ae8), not the Bay Trail E3825 the system description claims. lpc_ich
+#   logs "I/O space for ACPI uninitialized" and returns -ENODEV
+#   (drivers/mfd/lpc_ich.c) because the firmware leaves the ACPI/PM base
+#   register at 0, where the TCO registers live.
+#
+#   WDAT_WDT: the firmware publishes a WDAT table describing real hardware
+#   (timer_period 600ms, max_count 1023, PCI fields all 0xff), but its flags
+#   are 0x80 — the ACPI_WDAT_ENABLED bit is clear. acpi_watchdog_init() then
+#   silently skips it, so no wdat_wdt platform device is created.
+#
+# Both stay enabled so that enabling the watchdog in BIOS setup is all that is
+# needed. Until then SOFT_WATCHDOG is the only watchdog on the board and must
+# not be removed.
+CONFIG_WDAT_WDT=y
+CONFIG_LPC_ICH=y
+CONFIG_ITCO_WDT=y
+CONFIG_ITCO_VENDOR_SUPPORT=y
 CONFIG_DRM=y
 CONFIG_DRM_KMS_HELPER=y
 CONFIG_DRM_FBDEV_EMULATION=y

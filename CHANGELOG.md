@@ -12,6 +12,79 @@ follows:
    releases, and Linux kernel updates. They're also made to fix bugs and add
    features to the build infrastructure.
 
+## v0.1.9
+
+Delta update support, and the hardware watchdog this board actually has.
+
+* Delta updates
+  * `nerves_system_br` 1.32.3 -> 1.34.4, bringing fwup 1.16.0 to the target
+    (`0011-fwup-bump-to-v1.16.0.patch`).
+  * `fwup.conf` sets `block-cache-size-mb = 256`. This is about *applying* a
+    delta: fwup reads the source partition through its block cache, and the
+    8 MB default against a ~250 MB rootfs means segments are evicted and
+    re-read. It is declared by the firmware because the device is what has to
+    hold it; this unit reports `MemTotal: 7994344 kB`, so 256 MB is a small
+    fraction.
+
+    NervesHub also reads the key — from the *target* firmware's `meta.conf`,
+    re-parsed at generation time — and passes it to xdelta3 as the source
+    window (`-B`), where xdelta3 would otherwise use its own 64 MB default.
+    Measured on both real release pairs with the hub's exact argument list,
+    that makes almost no difference to delta size: 7,426,219 bytes without
+    `-B` versus 7,439,987 with on this target, and 4,103 versus 3,842 on the
+    other — marginally worse with the larger window. An earlier measurement
+    suggested a ~140x reduction; that pair could not be reproduced and the
+    claim is withdrawn. Delta size is not the reason to set this key.
+  * No FAT delta sources here, unlike the rock_5b: the only large member is
+    `rootfs.img`, which already has raw delta sources in both upgrade tasks.
+    On x86 the kernel lives inside the rootfs, so nothing else ships whole.
+  * `require-fwup-version` deliberately left at 0.15.0. Older fwup ignores an
+    unknown key in `meta.conf`, so this firmware still applies on a device
+    running 1.13.2 — slowly, but without error. Raising it would refuse those
+    devices instead.
+
+* Watchdog
+  * `CONFIG_WDAT_WDT=y`, which does **not** yet give this board a hardware
+    watchdog — the blocker is in the BIOS, not the kernel. Recorded here
+    because the config is right and only the firmware setting is missing.
+
+    The only watchdog today is `SOFT_WATCHDOG`, a kernel timer — confirmed on
+    a live unit, `nerves_heart` reports `wdt_identity: "Software Watchdog"`,
+    60s timeout. A kernel timer recovers a wedged BEAM but not a wedged
+    kernel, because the thing meant to notice is part of what hung, and these
+    units run unattended.
+
+    Both available routes are blocked by this firmware, independently, and
+    both were tried on hardware:
+
+    `ITCO_WDT` never bound. Despite the system description saying Atom E3825,
+    the CPU reports **E3940** and the LPC bridge is PCI `0x5ae8` — Apollo
+    Lake, not Bay Trail. `lpc_ich` logged "I/O space for ACPI uninitialized"
+    and returned `-ENODEV` (`drivers/mfd/lpc_ich.c`) because the firmware
+    leaves the ACPI/PM base register at 0, and the TCO registers live in that
+    I/O space.
+
+    `WDAT_WDT` never bound either, and this is the decisive one. The firmware
+    does publish a WDAT table describing real hardware — `timer_period` 600
+    ms, `max_count` 1023 (so up to ~614 s), `min_count` 2 — and its PCI
+    segment/bus/device/function are all `0xff`, so it is not skipped as a
+    legacy PCI device. But its `flags` are `0x80`: the `ACPI_WDAT_ENABLED`
+    bit (`0x1`) is clear. `acpi_watchdog_init()` then takes
+    `if (!(wdat->flags & ACPI_WDAT_ENABLED)) goto fail_put_wdat`, a silent
+    skip with no kernel message, so no `wdat_wdt` platform device is created
+    at all. The BIOS declares the watchdog off.
+
+    Getting a hardware watchdog on this board therefore needs the watchdog
+    enabled in BIOS setup. No kernel configuration substitutes for it, and
+    forcing the driver past that flag would drive a timer the firmware has not
+    set up.
+  * `ITCO_WDT` and `LPC_ICH` kept anyway. iTCO costs little and would take
+    over if firmware ever programmed the ACPI base; `lpc_ich` binds and
+    carries other cells regardless of the watchdog.
+  * `SOFT_WATCHDOG` stays, and must stay: it is currently the only watchdog
+    on the board. It can be dropped only once BIOS has been changed and
+    `wdt_identity` on the device reports the WDAT device instead.
+
 ## v0.1.0
 
 Initial release of nerves_system_x86_64_ark1124h for ARK1124H (Intel Atom E3825).
