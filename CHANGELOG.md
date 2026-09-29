@@ -12,6 +12,29 @@ follows:
    releases, and Linux kernel updates. They're also made to fix bugs and add
    features to the build infrastructure.
 
+## v0.1.12
+
+A USB install medium always mounts itself, so a unit that already has an install
+can be re-imaged or recovered from USB without zeroing its MBR first. (v0.1.10
+and v0.1.11 are taken by tags that never reached `main`.)
+
+* Install and recovery media get their own MBR disk signature. `complete` (what
+  `mix burn` and `fwup -t complete` write) now uses `mbr-media` with signature
+  `0x04030202` and a `grub.cfg` whose `root=PARTUUID=04030202-0x` names it
+  (`grub-media.cfg`, generated from `grub.cfg` by `post-build.sh`). Before,
+  every disk carried `0x04030201`. With a USB medium inserted into a unit with
+  an install, `root=PARTUUID=04030201-0x` named two disks, and an ark booted
+  its internal SSD's rootfs from a freshly burned USB. GRUB already loads the
+  kernel from its own disk (`(hd0,...)`), so only `root=` was ambiguous.
+* A new `install` task writes an internal disk with `0x04030201`. ImpalaOS's
+  installer uses it when an image lists it (`fwup -l`) and falls back to
+  `complete` otherwise. Both tasks share one body,
+  `fwup_include/fwup-full-install.conf`.
+* Unlike rock_5b, the upgrade tasks write neither the MBR nor `grub.cfg`, so a
+  medium keeps its signature through upgrades and reverts.
+* Which disk the unit boots is the BIOS's boot priority. Recovery from USB
+  needs USB before the internal SSD, which the image cannot set or check.
+
 ## v0.1.9
 
 Delta update support, and the hardware watchdog this board actually has.

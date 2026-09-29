@@ -28,6 +28,20 @@ cp $TARGET_DIR/lib/grub/i386-pc/boot.img $BINARIES_DIR
 # output directory so that it can be bundled with the system image.
 cp $NERVES_DEFCONFIG_DIR/grub.cfg $BINARIES_DIR
 
+# Install/recovery media boot from grub-media.cfg: the same file with root=
+# naming mbr-media's disk signature (0x04030202) instead of the internal disks'
+# (0x04030201). Generated rather than kept as a second copy so the two cannot
+# drift; see mbr-media in fwup.conf.
+sed 's/root=PARTUUID=04030201-/root=PARTUUID=04030202-/g' \
+    $BINARIES_DIR/grub.cfg > $BINARIES_DIR/grub-media.cfg
+for part in 02 03; do
+    grep -q "root=PARTUUID=04030202-$part " $BINARIES_DIR/grub-media.cfg || {
+        echo "post-build.sh: grub.cfg no longer has root=PARTUUID=04030201-$part;" >&2
+        echo "  update the grub-media.cfg substitution to match" >&2
+        exit 1
+    }
+done
+
 # Remove the Buildroot-generated grub.cfg so avoid confusion.
 # We put our grub in the FAT filesystem at the beginning of the
 # disk so that it exists across firmware updates.
