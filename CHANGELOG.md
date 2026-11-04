@@ -23,7 +23,9 @@ the local clock (`local stratum 10`) when it has no upstream source.
 * No init script is installed (`BR2_INIT_NONE`). ImpalaOS starts `chronyd`
   itself with its own config; the example `/etc/chrony.conf` from Buildroot
   is unused.
-* BusyBox `ntpd` stays until ImpalaOS no longer starts it.
+* BusyBox `ntpd` is removed (`busybox.fragment`). chrony replaces it, and
+  `nerves_time` starts no ntpd in ImpalaOS (`config :nerves_time, :servers, []`).
+  This system needs an ImpalaOS that starts `chronyd`.
 
 The version skips v0.1.10 to v0.1.12: those numbers were used for local
 builds that were never released.
