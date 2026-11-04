@@ -12,6 +12,22 @@ follows:
    releases, and Linux kernel updates. They're also made to fix bugs and add
    features to the build infrastructure.
 
+## v0.1.13
+
+chrony, so ImpalaOS can serve time to the ward devices on sites without
+internet. BusyBox ntpd reports itself unsynchronised (stratum 16) until it has
+reached an upstream server once, and clients reject that; chrony keeps serving
+the local clock (`local stratum 10`) when it has no upstream source.
+
+* `BR2_PACKAGE_CHRONY=y` (chrony 4.8): `chronyd` and `chronyc`.
+* No init script is installed (`BR2_INIT_NONE`). ImpalaOS starts `chronyd`
+  itself with its own config; the example `/etc/chrony.conf` from Buildroot
+  is unused.
+* BusyBox `ntpd` stays until ImpalaOS no longer starts it.
+
+The version skips v0.1.10 to v0.1.12: those numbers were used for local
+builds that were never released.
+
 ## v0.1.9
 
 Delta update support, and the hardware watchdog this board actually has.
