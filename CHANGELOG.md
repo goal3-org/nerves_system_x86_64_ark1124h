@@ -12,6 +12,15 @@ follows:
    releases, and Linux kernel updates. They're also made to fix bugs and add
    features to the build infrastructure.
 
+## v0.1.14
+
+An install stick formatted exFAT works on an ark, as it does on a rock_5b.
+
+* The kernel has exFAT (`CONFIG_EXFAT_FS=y`, iocharset utf8), as the rock_5b
+  system has since v0.1.13. Sticks of 64 GB and more come formatted exFAT; the
+  ark medium could not mount one and reported that the stick held no firmware
+  for this unit.
+
 ## v0.1.13
 
 A USB medium boots itself on any BIOS: GRUB no longer assumes the disk it is
