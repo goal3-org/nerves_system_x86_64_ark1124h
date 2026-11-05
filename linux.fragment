@@ -37,3 +37,11 @@ CONFIG_KEYS=y
 # If we later need bridge networking with port mapping, add:
 #   CONFIG_NETFILTER=y, CONFIG_BRIDGE=m, CONFIG_VETH=y,
 #   CONFIG_NF_NAT=m, CONFIG_NF_CONNTRACK=m, etc.
+
+# exFAT, so the same install stick works on an ark as on a rock_5b: sticks of
+# 64 GB and more come formatted exFAT, and the S+ migration's stick is exFAT
+# for its database dump. Without it the medium could not mount such a stick
+# and reported "no firmware (.fw) for this unit" (bench ark, 2026-11-05).
+# NLS_UTF8 is already in the defconfig.
+CONFIG_EXFAT_FS=y
+CONFIG_EXFAT_DEFAULT_IOCHARSET="utf8"
