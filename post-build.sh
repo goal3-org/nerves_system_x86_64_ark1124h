@@ -24,23 +24,26 @@ grub-editenv $BINARIES_DIR/grubenv_b_valid set validated=1
 # Copy MBR boot code boot.img
 cp $TARGET_DIR/lib/grub/i386-pc/boot.img $BINARIES_DIR
 
+# Build grub.img ourselves, over the one Buildroot made. Buildroot bakes the
+# prefix "(hd0,msdos1)/boot/grub" into it, so GRUB reads grub.cfg from the
+# BIOS's first disk, which is only the disk GRUB came from when the BIOS
+# renumbers the boot device to hd0. With "(,msdos1)/boot/grub" GRUB fills in
+# the disk it was actually loaded from; grub.cfg then keeps the kernel and
+# rootfs on that disk too (regexp and probe are built in for that).
+GRUB_MODULES="boot linux ext2 squash4 fat part_msdos normal biosdisk loadenv echo true test sleep regexp probe"
+GRUB_MODULE_DIR=$TARGET_DIR/lib/grub/i386-pc
+for m in $GRUB_MODULES; do
+    [ -f $GRUB_MODULE_DIR/$m.mod ] || { echo "post-build.sh: GRUB module $m.mod missing in $GRUB_MODULE_DIR" >&2; exit 1; }
+done
+$HOST_DIR/bin/grub-mkimage -d $GRUB_MODULE_DIR -O i386-pc -o $BINARIES_DIR/grub.img \
+    -p "(,msdos1)/boot/grub" $GRUB_MODULES
+# fwup.conf writes grub.img at sector 1, in front of the first partition.
+GRUB_IMG_SIZE=$(stat -c %s $BINARIES_DIR/grub.img)
+[ "$GRUB_IMG_SIZE" -lt 262144 ] || { echo "post-build.sh: grub.img is $GRUB_IMG_SIZE bytes, over the 256K before the first partition" >&2; exit 1; }
+
 # Copy everything that's needed to build firmware images over to the
 # output directory so that it can be bundled with the system image.
 cp $NERVES_DEFCONFIG_DIR/grub.cfg $BINARIES_DIR
-
-# Install/recovery media boot from grub-media.cfg: the same file with root=
-# naming mbr-media's disk signature (0x04030202) instead of the internal disks'
-# (0x04030201). Generated rather than kept as a second copy so the two cannot
-# drift; see mbr-media in fwup.conf.
-sed 's/root=PARTUUID=04030201-/root=PARTUUID=04030202-/g' \
-    $BINARIES_DIR/grub.cfg > $BINARIES_DIR/grub-media.cfg
-for part in 02 03; do
-    grep -q "root=PARTUUID=04030202-$part " $BINARIES_DIR/grub-media.cfg || {
-        echo "post-build.sh: grub.cfg no longer has root=PARTUUID=04030201-$part;" >&2
-        echo "  update the grub-media.cfg substitution to match" >&2
-        exit 1
-    }
-done
 
 # Remove the Buildroot-generated grub.cfg so avoid confusion.
 # We put our grub in the FAT filesystem at the beginning of the

@@ -12,6 +12,25 @@ follows:
    releases, and Linux kernel updates. They're also made to fix bugs and add
    features to the build infrastructure.
 
+## v0.1.13
+
+A USB medium boots itself on any BIOS: GRUB no longer assumes the disk it is
+on is the BIOS's first disk (hd0).
+
+* `grub.img` is built by `post-build.sh` with the prefix `(,msdos1)/boot/grub`
+  instead of Buildroot's `(hd0,msdos1)/boot/grub`: GRUB fills in the disk it
+  was loaded from, so it reads `grub.cfg` from its own disk even on a BIOS
+  that keeps the internal disk as hd0 while booting from USB. Before, such a
+  BIOS made a stick's GRUB read the internal disk's `grub.cfg` and boot the
+  internal install entirely, indistinguishable from not booting the stick.
+* `grub.cfg` loads the kernel from that same disk (`regexp` on `$root`) and
+  passes the kernel that partition's UUID read at boot (`probe --part-uuid`)
+  instead of a fixed `root=PARTUUID=04030201-0x`. The `regexp` and `probe`
+  modules are built in.
+* One `grub.cfg` for media and internal disks; `grub-media.cfg` is gone. The
+  disk signatures (media 0x04030202, internal 0x04030201) stay, as the way to
+  tell the two apart, but nothing in the boot path depends on them.
+
 ## v0.1.12
 
 A USB install medium always mounts itself, so a unit that already has an install
