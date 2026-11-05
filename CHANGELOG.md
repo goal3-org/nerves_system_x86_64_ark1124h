@@ -24,8 +24,9 @@ and v0.1.11 are taken by tags that never reached `main`.)
   (`grub-media.cfg`, generated from `grub.cfg` by `post-build.sh`). Before,
   every disk carried `0x04030201`. With a USB medium inserted into a unit with
   an install, `root=PARTUUID=04030201-0x` named two disks, and an ark booted
-  its internal SSD's rootfs from a freshly burned USB. GRUB already loads the
-  kernel from its own disk (`(hd0,...)`), so only `root=` was ambiguous.
+  its internal SSD's rootfs from a freshly burned USB. `grub.cfg` loads the
+  kernel from `(hd0,...)`, whichever disk the BIOS numbers first; this change
+  does not touch that.
 * A new `install` task writes an internal disk with `0x04030201`. ImpalaOS's
   installer uses it when an image lists it (`fwup -l`) and falls back to
   `complete` otherwise. Both tasks share one body,
