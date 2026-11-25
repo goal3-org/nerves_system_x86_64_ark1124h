@@ -12,6 +12,21 @@ follows:
    releases, and Linux kernel updates. They're also made to fix bugs and add
    features to the build infrastructure.
 
+## v0.1.15
+
+chrony, so ImpalaOS can serve time to the ward devices on sites without
+internet. BusyBox ntpd reports itself unsynchronised (stratum 16) until it has
+reached an upstream server once, and clients reject that; chrony keeps serving
+the local clock (`local stratum 10`) when it has no upstream source.
+
+* `BR2_PACKAGE_CHRONY=y` (chrony 4.8): `chronyd` and `chronyc`.
+* No init script is installed (`BR2_INIT_NONE`). ImpalaOS starts `chronyd`
+  itself with its own config; the example `/etc/chrony.conf` from Buildroot
+  is unused.
+* BusyBox `ntpd` is removed (`busybox.fragment`). chrony replaces it, and
+  `nerves_time` starts no ntpd in ImpalaOS (`config :nerves_time, :servers, []`).
+  This system needs an ImpalaOS that starts `chronyd`.
+
 ## v0.1.14
 
 An install stick formatted exFAT works on an ark, as it does on a rock_5b.
